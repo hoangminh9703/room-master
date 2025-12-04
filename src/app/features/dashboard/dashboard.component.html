@@ -1,0 +1,51 @@
+<div class="space-y-6">
+  <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+
+  <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading" class="text-center py-8">
+    <div class="inline-block">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Total Bookings -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-gray-500 text-sm font-medium">Total Bookings</h3>
+      <p class="text-3xl font-bold text-gray-900 mt-2">{{ stats.totalBookings }}</p>
+    </div>
+
+    <!-- Confirmed Bookings -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-gray-500 text-sm font-medium">Confirmed</h3>
+      <p class="text-3xl font-bold text-green-600 mt-2">{{ stats.confirmedBookings }}</p>
+    </div>
+
+    <!-- Available Rooms -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-gray-500 text-sm font-medium">Available Rooms</h3>
+      <p class="text-3xl font-bold text-blue-600 mt-2">{{ stats.availableRooms }}</p>
+    </div>
+
+    <!-- Occupied Rooms -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-gray-500 text-sm font-medium">Occupied Rooms</h3>
+      <p class="text-3xl font-bold text-orange-600 mt-2">{{ stats.occupiedRooms }}</p>
+    </div>
+
+    <!-- Total Guests -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-gray-500 text-sm font-medium">Total Guests</h3>
+      <p class="text-3xl font-bold text-purple-600 mt-2">{{ stats.totalGuests }}</p>
+    </div>
+  </div>
+
+  <div class="text-center py-4">
+    <button (click)="loadStats()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Refresh
+    </button>
+  </div>
+</div>
