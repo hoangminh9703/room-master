@@ -1,0 +1,182 @@
+<div class="space-y-6">
+  <h1 class="text-3xl font-bold text-gray-900">Check-in</h1>
+
+  <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+    {{ error }}
+  </div>
+
+  <!-- Guest Search & Verification -->
+  <div class="bg-white rounded-lg shadow p-6 space-y-4">
+    <h2 class="text-xl font-semibold text-gray-900">Guest Search & Verification</h2>
+    
+    <div class="flex gap-2">
+      <input 
+        [(ngModel)]="searchQuery" 
+        (keyup.enter)="searchBooking()"
+        type="text" 
+        placeholder="Search by guest name, phone, or booking ID..."
+        class="flex-1 px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      >
+      <button 
+        (click)="searchBooking()" 
+        [disabled]="loading"
+        class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+      >
+        {{ loading ? 'Searching...' : 'Search' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="selectedBooking" class="space-y-6">
+    <!-- Booking Details -->
+    <div class="bg-white rounded-lg shadow p-6 space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Booking Details</h2>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Guest Name</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.guestName || 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.guestPhone || 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Room</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.roomNumber || 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Check-in Date</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.checkInDate || 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Check-out Date</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.checkOutDate || 'N/A' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Number of Nights</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.numberOfNights || 'N/A' }}</p>
+        </div>
+      </div>
+
+      <div class="border-t pt-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Total Price</label>
+            <p class="text-2xl font-bold text-gray-900">{{ selectedBooking.totalPrice | currency }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Balance Due</label>
+            <p class="text-2xl font-bold text-red-600">{{ (selectedBooking.totalPrice * 0.7) | currency }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Room Assignment -->
+    <div class="bg-white rounded-lg shadow p-6 space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Room Assignment</h2>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Room</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.room_number }} ({{ selectedBooking.room_type || 'Standard' }})</p>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <p class="text-lg">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+              ✓ Clean & Ready
+            </span>
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Floor</label>
+          <p class="text-lg text-gray-900 font-medium">{{ selectedBooking.floor || '2' }}</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Amenities</label>
+          <p class="text-lg text-gray-900">
+            WiFi ✓ AC ✓ TV ✓ Mini Bar ✓
+          </p>
+        </div>
+
+        <div class="border-t pt-4">
+          <button 
+            (click)="generateKeyCard()"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Generate Key Card
+          </button>
+          
+          <div *ngIf="keyGenerated" class="mt-3 p-3 bg-gray-100 rounded">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Key Code</label>
+            <p class="text-xl font-mono font-bold text-gray-900">{{ generatedKeyCode }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Steps -->
+    <div class="bg-white rounded-lg shadow p-6 space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Final Steps</h2>
+      
+      <div class="space-y-3">
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="checklistItems.roomClean" 
+            class="w-4 h-4 text-blue-600 rounded"
+          >
+          <span class="ml-3 text-gray-700">Room is clean and ready</span>
+        </label>
+
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="checklistItems.idVerified" 
+            class="w-4 h-4 text-blue-600 rounded"
+          >
+          <span class="ml-3 text-gray-700">ID verified</span>
+        </label>
+
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="checklistItems.paymentReceived" 
+            class="w-4 h-4 text-blue-600 rounded"
+          >
+          <span class="ml-3 text-gray-700">Balance payment received</span>
+        </label>
+
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="checklistItems.formSigned" 
+            class="w-4 h-4 text-blue-600 rounded"
+          >
+          <span class="ml-3 text-gray-700">Guest signed registration form</span>
+        </label>
+      </div>
+
+      <div class="flex gap-3 pt-4 border-t">
+        <button 
+          (click)="cancel()" 
+          class="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button 
+          (click)="completeCheckIn()" 
+          [disabled]="loading"
+          class="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
+        >
+          {{ loading ? 'Processing...' : 'Complete Check-in' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

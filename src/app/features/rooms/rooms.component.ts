@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { IpcService } from '../../core/services/ipc.service';
+import { ApiService } from '../../core/services/api.service';
 
 @Component({
   selector: 'app-rooms',
@@ -11,8 +11,12 @@ export class RoomsComponent implements OnInit {
   loading = true;
   error: string | null = null;
   statusFilter = 'all';
+  viewMode: 'grid' | 'list' = 'grid';
+  floorFilter = 'all';
+  typeFilter = 'all';
+  searchQuery = '';
 
-  constructor(private ipcService: IpcService) {}
+  constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
     this.loadRooms();
@@ -22,12 +26,30 @@ export class RoomsComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    const filters = this.statusFilter === 'all' ? {} : { status: this.statusFilter };
+    const filters = {};
 
-    this.ipcService
+    this.apiService
       .invoke<any>('room:list', filters)
       .then((response) => {
-        this.rooms = response.rooms || [];
+        let rooms = response || [];
+        if (this.statusFilter !== 'all') {
+          rooms = rooms.filter((r: any) => r.status === this.statusFilter);
+        }
+        if (this.floorFilter !== 'all') {
+          rooms = rooms.filter((r: any) => r.floor?.toString() === this.floorFilter);
+        }
+
+        if (this.typeFilter !== 'all') {
+          rooms = rooms.filter((r: any) => r.roomTypeId === this.typeFilter);
+        }
+
+        if (this.searchQuery.trim()) {
+          rooms = rooms.filter((r: any) =>
+            r.roomNumber?.toLowerCase().includes(this.searchQuery.toLowerCase())
+          );
+        }
+
+        this.rooms = rooms;
         this.loading = false;
       })
       .catch((err) => {
@@ -41,11 +63,15 @@ export class RoomsComponent implements OnInit {
     this.loadRooms();
   }
 
+  toggleViewMode(mode: 'grid' | 'list'): void {
+    this.viewMode = mode;
+  }
+
   updateRoomStatus(roomId: string, event: any): void {
     const newStatus = event.target.value;
     if (!newStatus) return;
 
-    this.ipcService
+    this.apiService
       .invoke('room:update-status', { roomId, status: newStatus })
       .then(() => {
         this.loadRooms();
@@ -69,5 +95,28 @@ export class RoomsComponent implements OnInit {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'Available':
+        return '🟢';
+      case 'Occupied':
+        return '🔴';
+      case 'Cleaning':
+        return '🟡';
+      case 'Maintenance':
+        return '⚠️';
+      default:
+        return '⚪';
+    }
+  }
+
+  getUniqueFloors(): string[] {
+    return [...new Set(this.rooms.map(r => r.floor?.toString()).filter(Boolean))].sort();
+  }
+
+  getUniqueTypes(): string[] {
+    return [...new Set(this.rooms.map(r => r.roomTypeId).filter(Boolean))].sort();
   }
 }

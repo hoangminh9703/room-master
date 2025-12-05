@@ -7,6 +7,8 @@ import { BookingsComponent } from './features/bookings/bookings.component';
 import { RoomsComponent } from './features/rooms/rooms.component';
 import { GuestsComponent } from './features/guests/guests.component';
 import { ReportsComponent } from './features/reports/reports.component';
+import { CheckInComponent } from './features/check-in/check-in.component';
+import { CheckOutComponent } from './features/check-out/check-out.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -14,6 +16,8 @@ const routes: Routes = [
   { path: 'bookings', component: BookingsComponent },
   { path: 'rooms', component: RoomsComponent },
   { path: 'guests', component: GuestsComponent },
+  { path: 'check-in', component: CheckInComponent },
+  { path: 'check-out', component: CheckOutComponent },
   { path: 'reports', component: ReportsComponent },
   { path: '**', redirectTo: '/dashboard' }
 ];
@@ -26,6 +30,8 @@ const routes: Routes = [
     BookingsComponent,
     RoomsComponent,
     GuestsComponent,
+    CheckInComponent,
+    CheckOutComponent,
     ReportsComponent
   ]
 })

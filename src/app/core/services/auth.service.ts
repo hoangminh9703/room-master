@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { IpcService } from './ipc.service';
 import { User, LoginRequest, LoginResponse, AuthState } from '../models';
 
 @Injectable({
@@ -16,7 +15,7 @@ export class AuthService {
     error: null
   });
 
-  constructor(private ipcService: IpcService) {
+  constructor() {
     this.initializeAuth();
   }
 
@@ -43,43 +42,50 @@ export class AuthService {
     return new Observable(observer => {
       this.updateAuthState({ loading: true, error: null });
 
-      this.ipcService.invoke<LoginResponse>('auth:login', credentials)
-        .then(response => {
-          localStorage.setItem('auth_token', response.token);
-          localStorage.setItem('current_user', JSON.stringify(response.user));
+      setTimeout(() => {
+        if (credentials.username === 'admin' && credentials.password === 'admin123') {
+          const now = new Date().toISOString();
+          const user: User = {
+            user_id: '1',
+            username: 'admin',
+            email: 'admin@hoteldesk.com',
+            role: 'Admin',
+            status: 'Active',
+            created_at: now,
+            updated_at: now
+          };
+          const token = 'demo-token-' + Date.now();
+          const expiresIn = 86400;
+          
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('current_user', JSON.stringify(user));
 
           this.updateAuthState({
             isAuthenticated: true,
-            user: response.user,
-            token: response.token,
+            user,
+            token,
             loading: false,
             error: null
           });
 
-          observer.next(response);
+          observer.next({ success: true, user, token, expiresIn });
           observer.complete();
-        })
-        .catch(error => {
-          const errorMessage = error instanceof Error ? error.message : 'Login failed';
+        } else {
+          const errorMessage = 'Invalid credentials. Use admin / admin123';
           this.updateAuthState({ loading: false, error: errorMessage });
-          observer.error(error);
-        });
+          observer.error(new Error(errorMessage));
+        }
+      }, 500);
     });
   }
 
   logout(): Observable<void> {
     return new Observable(observer => {
-      this.ipcService.invoke('auth:logout', {})
-        .then(() => {
-          this.clearAuth();
-          observer.next();
-          observer.complete();
-        })
-        .catch(error => {
-          console.error('Logout error:', error);
-          this.clearAuth();
-          observer.error(error);
-        });
+      setTimeout(() => {
+        this.clearAuth();
+        observer.next();
+        observer.complete();
+      }, 300);
     });
   }
 
@@ -94,21 +100,11 @@ export class AuthService {
     }
 
     return new Observable(observer => {
-      this.ipcService.invoke<{ valid: boolean }>('auth:verify-token', { token })
-        .then((response: any) => {
-          const isValid = response?.valid ?? false;
-          if (!isValid) {
-            this.clearAuth();
-          }
-          observer.next(isValid);
-          observer.complete();
-        })
-        .catch(error => {
-          console.error('Token verification error:', error);
-          this.clearAuth();
-          observer.next(false);
-          observer.complete();
-        });
+      setTimeout(() => {
+        const isValid = token.startsWith('demo-token-');
+        observer.next(isValid);
+        observer.complete();
+      }, 300);
     });
   }
 
