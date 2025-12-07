@@ -1,0 +1,249 @@
+<div class="space-y-6">
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-gray-900">Guests</h1>
+    <button (click)="openCreateModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">
+      + New Guest
+    </button>
+  </div>
+
+  <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+    {{ error }}
+  </div>
+
+  <div class="bg-white rounded-lg shadow p-6">
+    <div class="flex gap-2">
+      <input 
+        [(ngModel)]="searchQuery" 
+        (keyup.enter)="onSearch()" 
+        type="text" 
+        placeholder="Search by name, email, or phone..."
+        class="flex-1 px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      >
+      <button (click)="onSearch()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        Search
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-8">
+    <div class="inline-block">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading" class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+          <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th> -->
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+          <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Type</th> -->
+          <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nationality</th> -->
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <tr *ngFor="let guest of guests" class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ guest.full_Name }}</td>
+          <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ guest.email || '-' }}</td> -->
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ guest.phone || '-' }}</td>
+          <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ guest.idType || '-' }}</td> -->
+          <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ guest.nationality || '-' }}</td> -->
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+            <button (click)="openViewModal(guest)" class="text-blue-600 hover:text-blue-900">View</button>
+            <button (click)="openEditModal(guest)" class="text-teal-600 hover:text-teal-900">Edit</button>
+            <button (click)="deleteGuest(guest.guestId)" class="text-red-600 hover:text-red-900">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="guests.length === 0" class="text-center py-8 text-gray-500">
+      No guests found
+    </div>
+  </div>
+</div>
+
+<!-- Create Modal -->
+<div *ngIf="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-y-auto">
+    <div class="flex justify-between items-center p-6 border-b">
+      <h2 class="text-xl font-bold text-gray-900">Add New Guest</h2>
+      <button (click)="closeCreateModal()" class="text-gray-500 hover:text-gray-700">
+        <span class="text-2xl">&times;</span>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+        <input [(ngModel)]="newGuest.fullName" type="text" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input [(ngModel)]="newGuest.email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+        <input [(ngModel)]="newGuest.phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">ID Type</label>
+        <select [(ngModel)]="newGuest.idType" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="Passport">Passport</option>
+          <option value="Driver License">Driver License</option>
+          <option value="National ID">National ID</option>
+          <option value="Visa">Visa</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">ID Number</label>
+        <input [(ngModel)]="newGuest.idNumber" type="text" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+        <input [(ngModel)]="newGuest.nationality" type="text" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+        <textarea [(ngModel)]="newGuest.address" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="2"></textarea>
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button (click)="closeCreateModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-medium">
+          Cancel
+        </button>
+        <button (click)="createGuest()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">
+          Create
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div *ngIf="showEditModal && selectedGuest" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-y-auto">
+    <div class="flex justify-between items-center p-6 border-b">
+      <h2 class="text-xl font-bold text-gray-900">Edit Guest</h2>
+      <button (click)="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+        <span class="text-2xl">&times;</span>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+        <input [(ngModel)]="newGuest.fullName" type="text" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input [(ngModel)]="newGuest.email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+        <input [(ngModel)]="newGuest.phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">ID Type</label>
+        <select [(ngModel)]="newGuest.idType" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="Passport">Passport</option>
+          <option value="Driver License">Driver License</option>
+          <option value="National ID">National ID</option>
+          <option value="Visa">Visa</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">ID Number</label>
+        <input [(ngModel)]="newGuest.idNumber" type="text" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+        <input [(ngModel)]="newGuest.nationality" type="text" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+        <textarea [(ngModel)]="newGuest.address" class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="2"></textarea>
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button (click)="closeEditModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-medium">
+          Cancel
+        </button>
+        <button (click)="updateGuest()" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 font-medium">
+          Update
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Modal -->
+<div *ngIf="showViewModal && selectedGuest" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-y-auto">
+    <div class="flex justify-between items-center p-6 border-b">
+      <h2 class="text-xl font-bold text-gray-900">Guest Details</h2>
+      <button (click)="closeViewModal()" class="text-gray-500 hover:text-gray-700">
+        <span class="text-2xl">&times;</span>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-500">Full Name</label>
+        <p class="text-lg font-medium text-gray-900">{{ selectedGuest.fullName }}</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-500">Email</label>
+          <p class="text-gray-900">{{ selectedGuest.email || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-500">Phone</label>
+          <p class="text-gray-900">{{ selectedGuest.phone || '-' }}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-500">ID Type</label>
+          <p class="text-gray-900">{{ selectedGuest.idType || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-500">ID Number</label>
+          <p class="text-gray-900">{{ selectedGuest.idNumber || '-' }}</p>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-500">Nationality</label>
+        <p class="text-gray-900">{{ selectedGuest.nationality || '-' }}</p>
+      </div>
+
+      <div *ngIf="selectedGuest.address">
+        <label class="block text-sm font-medium text-gray-500">Address</label>
+        <p class="text-gray-900">{{ selectedGuest.address }}</p>
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button (click)="closeViewModal()" class="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 font-medium">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,130 @@
+You are a senior full-stack architect specializing in Angular + Electron desktop apps.
+
+Goal: Generate a complete project from requirements, including business analysis, UI/UX design, architecture, full source code, database, and documents.
+
+=====================================================
+1. PROJECT CONTEXT
+=====================================================
+Domain: Hotel Management (Front Desk)
+Project Name: HotelDesk
+Tech Stack:
+- Angular 17 (frontend)
+- Electron 28 (desktop shell)
+- TailwindCSS
+- SQLite (local database)
+- TypeScript
+- Node.js backend inside Electron main process
+
+=====================================================
+2. REQUIRED OUTPUTS
+=====================================================
+
+### A. Business Analysis
+1. Business description
+2. Business workflow diagrams:
+   - Booking workflow
+   - Check-in workflow
+   - Check-out workflow
+   - Room assignment workflow
+3. Use case list + Use Case Diagram
+4. Non-functional requirements
+5. Data constraints, validation rules
+
+### B. System Design
+1. System Architecture Diagram (Electron + Angular + SQLite)
+2. Module decomposition
+3. Folder structure (Angular + Electron)
+4. Naming conventions
+5. API design between Angular Renderer & Electron Main
+
+### C. UI/UX DESIGN (GENERATE EVERY SCREEN)
+1. Generate UI wireframes (ASCII or Figma-like text format)
+2. Generate Hi-Fi descriptions using Tailwind
+3. Generate layout suggestions and components
+
+Required Screens:
+- Login / Role Selection
+- Dashboard
+- Room List
+- Booking List
+- Create Booking
+- Check-in
+- Check-out
+- Guests Management
+- Reports
+
+### D. CODE GENERATION
+Generate complete source code templates for:
+- Angular components
+- Angular services
+- Routing module
+- State management (RxJS)
+- Electron main.js
+- Preload.js (secure IPC)
+- IPC channels
+- SQLite data layer
+- Unit test samples
+- Script build + packaging
+
+### E. DATABASE DESIGN (SQLite)
+Generate:
+1. ERD
+2. SQL migration script
+3. Seed data generator script
+4. Sample dataset with realistic hotel data:
+   - 30 rooms
+   - 50 guests
+   - 20 bookings
+   - pricing rules
+
+### F. AUTOMATION SCRIPTS
+Generate:
+1. PowerShell script to initialize the project
+2. .bat script to auto-install dependencies
+3. Shell commands for Linux/Mac
+4. Script to build Electron app to EXE
+
+### G. DOCUMENTATION
+Generate:
+1. README.md complete
+2. Setup guide
+3. Troubleshooting guide
+4. Test plan
+5. Release notes template
+6. Changelog template
+
+### H. PROJECT ROADMAP
+1. 7-day execution plan
+2. Task list (Jira style)
+3. Git commit message convention (Angular style)
+
+=====================================================
+3. RULES FOR GENERATION
+=====================================================
+- Output everything in clean formatting
+- No placeholder text like “lorem ipsum”
+- Use real sample data (Vietnamese names allowed)
+- Code must run without modification
+- Ensure Electron security best practices (contextIsolation, disable remote)
+- Ensure SQLite queries safe
+- Generate all files with correct extensions inside code blocks
+
+=====================================================
+4. FINAL OUTPUT FORMAT
+=====================================================
+Produce sections in exact order:
+
+1. Business Requirements
+2. Architecture
+3. UI/UX Design
+4. Database (SQLite)
+5. Source Code (Angular + Electron)
+6. Build Tools & Scripts
+7. Seed Data Generator
+8. Documentation
+9. Final Deliverables Summary
+
+=====================================================
+BEGIN NOW.
+=====================================================
+
