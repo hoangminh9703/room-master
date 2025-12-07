@@ -39,7 +39,6 @@ A modern, professional desktop application for hotel front-desk operations built
 ### Backend
 - **Electron 28**: Desktop application shell
 - **Node.js**: Backend runtime
-- **SQLite**: Local database
 - **Better-sqlite3**: High-performance database driver
 - **bcryptjs**: Password hashing
 - **UUID**: Unique identifier generation
@@ -66,9 +65,6 @@ cd hoteldesk
 
 # Install dependencies
 npm install
-
-# Initialize database
-npm run db:init
 
 # Start development server
 npm start
@@ -104,11 +100,6 @@ Access the main dashboard to view:
 5. Generate key card
 6. Mark as checked in
 
-### Generate Reports
-1. Navigate to Reports
-2. Select report type (Revenue/Occupancy/Bookings)
-3. Set date range
-4. View or export results
 
 ## Project Structure
 
