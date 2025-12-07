@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { User, LoginRequest, LoginResponse, AuthState } from '../models';
+import { BehaviorSubject, Observable, from, throwError } from 'rxjs';
+import { map, tap, catchError } from 'rxjs/operators';
+import { User, LoginRequest, LoginResponse, AuthState, Account } from '../models';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,25 +11,32 @@ export class AuthService {
   private authState$ = new BehaviorSubject<AuthState>({
     isAuthenticated: false,
     user: null,
-    token: null,
+    accessToken: null,
+    refreshToken: null,
     loading: false,
     error: null
   });
 
-  constructor() {
+  private accessTokenKey = 'accessToken';
+  private refreshTokenKey = 'refreshToken';
+  private userKey = 'current_user';
+
+  constructor(private apiService: ApiService) {
     this.initializeAuth();
   }
 
   private initializeAuth(): void {
-    const token = localStorage.getItem('auth_token');
-    const user = localStorage.getItem('current_user');
+    const accessToken = localStorage.getItem(this.accessTokenKey);
+    const refreshToken = localStorage.getItem(this.refreshTokenKey);
+    const user = localStorage.getItem(this.userKey);
 
-    if (token && user) {
+    if (accessToken && refreshToken && user) {
       try {
         this.authState$.next({
           isAuthenticated: true,
           user: JSON.parse(user),
-          token,
+          accessToken,
+          refreshToken,
           loading: false,
           error: null
         });
@@ -39,76 +47,71 @@ export class AuthService {
   }
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
-    return new Observable(observer => {
-      this.updateAuthState({ loading: true, error: null });
+    this.updateAuthState({ loading: true, error: null });
 
-      setTimeout(() => {
-        if (credentials.username === 'admin' && credentials.password === 'admin123') {
-          const now = new Date().toISOString();
-          const user: User = {
-            user_id: '1',
-            username: 'admin',
-            email: 'admin@hoteldesk.com',
-            role: 'Admin',
-            status: 'Active',
-            created_at: now,
-            updated_at: now
-          };
-          const token = 'demo-token-' + Date.now();
-          const expiresIn = 86400;
-          
-          localStorage.setItem('auth_token', token);
-          localStorage.setItem('current_user', JSON.stringify(user));
+    return from(
+      this.apiService.login<LoginResponse>({
+        username: credentials.username,
+        password: credentials.password
+      })
+    ).pipe(
+      map((resp) => {
+        const payload = resp.data as any;
+        const accessToken = payload?.accessToken || payload?.AccessToken;
+        const refreshToken = payload?.refreshToken || payload?.RefreshToken || null;
+        const account: Account | User | null = payload?.account || payload?.Account || null;
 
-          this.updateAuthState({
-            isAuthenticated: true,
-            user,
-            token,
-            loading: false,
-            error: null
-          });
-
-          observer.next({ success: true, user, token, expiresIn });
-          observer.complete();
-        } else {
-          const errorMessage = 'Invalid credentials. Use admin / admin123';
-          this.updateAuthState({ loading: false, error: errorMessage });
-          observer.error(new Error(errorMessage));
+        if (!accessToken) {
+          throw new Error('Missing access token');
         }
-      }, 500);
-    });
+
+        if (accessToken) localStorage.setItem(this.accessTokenKey, accessToken);
+        if (refreshToken) localStorage.setItem(this.refreshTokenKey, refreshToken);
+        if (account) localStorage.setItem(this.userKey, JSON.stringify(account));
+
+        this.updateAuthState({
+          isAuthenticated: true,
+          user: account,
+          accessToken,
+          refreshToken,
+          loading: false,
+          error: null
+        });
+
+        return {
+          accessToken,
+          refreshToken: refreshToken || '',
+          account
+        } as LoginResponse;
+      }),
+      tap({
+        error: (err) => this.updateAuthState({ loading: false, error: err?.message || 'Login failed' })
+      }),
+      catchError((err) => {
+        this.updateAuthState({ loading: false, error: err?.message || 'Login failed' });
+        return throwError(() => err);
+      })
+    );
   }
 
   logout(): Observable<void> {
     return new Observable(observer => {
-      setTimeout(() => {
-        this.clearAuth();
-        observer.next();
-        observer.complete();
-      }, 300);
+      this.clearAuth();
+      observer.next();
+      observer.complete();
     });
   }
 
   verifyToken(): Observable<boolean> {
-    const token = this.authState$.value.token;
-
-    if (!token) {
-      return new Observable(observer => {
-        observer.next(false);
-        observer.complete();
-      });
-    }
+    const token = this.authState$.value.accessToken;
 
     return new Observable(observer => {
-      setTimeout(() => {
-        const isValid = token.startsWith('demo-token-');
-        observer.next(isValid);
-        observer.complete();
-      }, 300);
+      observer.next(!!token);
+      observer.complete();
     });
   }
 
-  getCurrentUser(): Observable<User | null> {
+  getCurrentUser(): Observable<Account | User | null> {
     return this.authState$.asObservable().pipe(
       map(state => state.user)
     );
@@ -124,10 +127,22 @@ export class AuthService {
     return this.authState$.asObservable();
   }
 
-  hasRole(role: string | string[]): Observable<boolean> {
-    const roles = Array.isArray(role) ? role : [role];
+  private toRoleCode(value: any): number {
+    if (typeof value === 'number') return value;
+    const v = String(value || '').toLowerCase();
+    if (v === 'admin' || v === '1') return 1;
+    if (v === 'le tan' || v === 'lễ tân' || v === 'receptionist' || v === '2') return 2;
+    return 0;
+  }
+
+  hasRole(role: string | string[] | number | number[]): Observable<boolean> {
+    const requiredRoles = (Array.isArray(role) ? role : [role]).map(r => this.toRoleCode(r));
     return this.authState$.asObservable().pipe(
-      map(state => state.isAuthenticated && state.user ? roles.includes(state.user.role) : false)
+      map(state => {
+        if (!state.isAuthenticated || !state.user) return false;
+        const userRoleCode = this.toRoleCode((state.user as any)?.role);
+        return requiredRoles.includes(userRoleCode);
+      })
     );
   }
 
@@ -137,12 +152,14 @@ export class AuthService {
   }
 
   private clearAuth(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('current_user');
+    localStorage.removeItem(this.accessTokenKey);
+    localStorage.removeItem(this.refreshTokenKey);
+    localStorage.removeItem(this.userKey);
     this.updateAuthState({
       isAuthenticated: false,
       user: null,
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       loading: false,
       error: null
     });

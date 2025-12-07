@@ -5,17 +5,28 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface Account {
+  accountId?: string;
+  username?: string;
+  email?: string;
+  role?: string | number;
+  status?: string;
+  fullName?: string;
+  phone?: string;
+  [key: string]: any;
+}
+
 export interface LoginResponse {
-  success: boolean;
-  token: string;
-  user: User;
-  expiresIn: number;
+  accessToken: string;
+  refreshToken: string;
+  account: Account | User | null;
 }
 
 export interface AuthState {
   isAuthenticated: boolean;
-  user: User | null;
-  token: string | null;
+  user: Account | User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   loading: boolean;
   error: string | null;
 }

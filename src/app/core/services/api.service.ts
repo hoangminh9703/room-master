@@ -16,6 +16,8 @@ interface ApiResponse<T> {
 export class ApiService {
   private baseUrl = environment.apiBaseUrl;
   private timeout = 30000;
+  private accessTokenKey = 'accessToken';
+  private refreshTokenKey = 'refreshToken';
 
   constructor(private mockDataService: MockDataService) {}
 
@@ -47,100 +49,147 @@ export class ApiService {
     }
   }
 
-  async get<T>(endpoint: string): Promise<T> {
+  private getAccessToken(): string | null {
+    return localStorage.getItem(this.accessTokenKey);
+  }
+
+  private getRefreshToken(): string | null {
+    return localStorage.getItem(this.refreshTokenKey);
+  }
+
+  private setTokens(accessToken: string, refreshToken?: string): void {
+    if (accessToken) localStorage.setItem(this.accessTokenKey, accessToken);
+    if (refreshToken) localStorage.setItem(this.refreshTokenKey, refreshToken);
+  }
+
+  private clearTokens(): void {
+    localStorage.removeItem(this.accessTokenKey);
+    localStorage.removeItem(this.refreshTokenKey);
+  }
+
+  private async requestRaw<T>(
+    method: string,
+    endpoint: string,
+    body?: any,
+    requiresAuth: boolean = true,
+    allowRefresh: boolean = true
+  ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const response = await this.fetchWithTimeout(url, { method: 'GET' });
-      const data: ApiResponse<T> = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP Error: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || 'API returned error');
-      }
-
-      return data.data as T;
-    } catch (error) {
-      console.error(`GET ${endpoint} failed:`, error);
-      throw error;
+    const headers: any = {};
+    const accessToken = this.getAccessToken();
+    if (requiresAuth && accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
+
+    const doFetch = async (): Promise<Response> => {
+      return await this.fetchWithTimeout(url, {
+        method,
+        body: body ? JSON.stringify(body) : undefined,
+        headers
+      });
+    };
+
+    let response = await doFetch();
+
+    // Attempt refresh on 401 once
+    if (response.status === 401 && requiresAuth && allowRefresh) {
+      const refreshed = await this.tryRefreshTokens();
+      if (refreshed) {
+        const newAccess = this.getAccessToken();
+        if (newAccess) {
+          headers['Authorization'] = `Bearer ${newAccess}`;
+        }
+        response = await doFetch();
+      }
+    }
+
+    const data: any = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const err: any = new Error(data?.message || `HTTP Error: ${response.status}`);
+      err.status = response.status;
+      throw err;
+    }
+
+    const success = data?.success ?? data?.Success ?? true;
+    const payload = (data?.data ?? data?.Data ?? null) as T;
+    return { success, message: data?.message, data: payload, errors: data?.errors };
+  }
+
+  private async request<T>(
+    method: string,
+    endpoint: string,
+    body?: any,
+    requiresAuth: boolean = true
+  ): Promise<T> {
+    const resp = await this.requestRaw<T>(method, endpoint, body, requiresAuth);
+    if (!resp.success) {
+      throw new Error(resp.message || 'API returned error');
+    }
+    return resp.data as T;
+  }
+
+  private async tryRefreshTokens(): Promise<boolean> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+      const url = `${this.baseUrl}/accounts/refresh`;
+      const response = await this.fetchWithTimeout(url, {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      const data: any = await response.json();
+      if (!response.ok) {
+        this.clearTokens();
+        return false;
+      }
+
+      const payload = data?.data || data?.Data;
+      const access = payload?.accessToken || payload?.AccessToken;
+      const refresh = payload?.refreshToken || payload?.RefreshToken || refreshToken;
+      if (access) {
+        this.setTokens(access, refresh);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      this.clearTokens();
+      return false;
+    }
+  }
+
+  async get<T>(endpoint: string): Promise<T> {
+    return await this.request<T>('GET', endpoint);
   }
 
   async post<T>(endpoint: string, body: any = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const response = await this.fetchWithTimeout(url, {
-        method: 'POST',
-        body: JSON.stringify(body)
-      });
+    return await this.request<T>('POST', endpoint, body);
+  }
 
-      const data: ApiResponse<T> = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP Error: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || 'API returned error');
-      }
-
-      return data.data as T;
-    } catch (error) {
-      console.error(`POST ${endpoint} failed:`, error);
-      throw error;
-    }
+  async postRaw<T>(endpoint: string, body: any = {}): Promise<ApiResponse<T>> {
+    return await this.requestRaw<T>('POST', endpoint, body);
   }
 
   async put<T>(endpoint: string, body: any = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const response = await this.fetchWithTimeout(url, {
-        method: 'PUT',
-        body: JSON.stringify(body)
-      });
+    return await this.request<T>('PUT', endpoint, body);
+  }
 
-      const data: ApiResponse<T> = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP Error: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || 'API returned error');
-      }
-
-      return data.data as T;
-    } catch (error) {
-      console.error(`PUT ${endpoint} failed:`, error);
-      throw error;
-    }
+  async putRaw<T>(endpoint: string, body: any = {}): Promise<ApiResponse<T>> {
+    return await this.requestRaw<T>('PUT', endpoint, body);
   }
 
   async delete<T>(endpoint: string): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    try {
-      const response = await this.fetchWithTimeout(url, { method: 'DELETE' });
-      const data: ApiResponse<T> = await response.json();
+    return await this.request<T>('DELETE', endpoint);
+  }
 
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP Error: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || 'API returned error');
-      }
-
-      return data.data as T;
-    } catch (error) {
-      console.error(`DELETE ${endpoint} failed:`, error);
-      throw error;
-    }
+  async login<T>(body: any): Promise<ApiResponse<T>> {
+    return await this.requestRaw<T>('POST', '/accounts/login', body, false, false);
   }
 
   async invoke<T>(channel: string, data?: any): Promise<T> {

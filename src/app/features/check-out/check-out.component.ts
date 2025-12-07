@@ -1,35 +1,43 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../core/services/api.service';
 
+interface Booking {
+  booking_id: string;
+  full_name: string;
+  phone: string;
+  room_number: string;
+  check_in_date: string;
+  check_out_date: string;
+  status: string;
+  total_price: number;
+  number_of_nights: number;
+}
+
+interface BookingSearchResponse {
+  Items: Booking[];
+  TotalRows: number;
+}
+
 @Component({
   selector: 'app-check-out',
   templateUrl: './check-out.component.html',
   styleUrls: ['./check-out.component.css']
 })
 export class CheckOutComponent implements OnInit {
-  occupiedBookings: any[] = [];
-  selectedBooking: any = null;
+  occupiedBookings: Booking[] = [];
   loading = false;
   error: string | null = null;
   searchQuery = '';
-
-  extraCharges = {
-    roomService: 0,
-    miniBar: 0,
-    laundry: 0
-  };
-
-  inspection = {
-    damagesFound: false,
-    damageDetails: '',
-    estimatedRepair: 0
-  };
-
-  paymentMethod = 'Cash';
+  searchDate: string = '';
+  pageIndex = 1;
+  pageSize = 10;
+  totalRows = 0;
 
   constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
+    // Mặc định search booking ngày hôm nay đã check-in
+    this.searchDate = new Date().toISOString().split('T')[0];
     this.loadOccupiedBookings();
   }
 
@@ -37,10 +45,23 @@ export class CheckOutComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
+    const payload = {
+      keyword: this.searchQuery.trim() || null,
+      pageIndex: this.pageIndex,
+      pageSize: this.pageSize,
+      status: 'Checked_In',
+      fromDate: null,
+      toDate: null,
+      searchCheckInDate: this.searchDate || null,
+      searchCheckOutDate: null,
+      type: this.searchDate ? 1 : null
+    };
+
     this.apiService
-      .invoke<any>('booking:search', { status: 'Checked_In' })
+      .post<any>('/bookings/search', payload)
       .then((response) => {
-        this.occupiedBookings = response.bookings || [];
+        this.occupiedBookings = response.items || [];
+        this.totalRows = response.totalRows || 0;
         this.loading = false;
       })
       .catch((err) => {
@@ -50,14 +71,18 @@ export class CheckOutComponent implements OnInit {
       });
   }
 
-  selectBooking(booking: any): void {
-    this.selectedBooking = booking;
-    this.resetCharges();
+  selectBooking(booking: Booking): void {
+    // no-op after simplification
   }
 
-  searchBooking(): void {
-    if (!this.searchQuery.trim()) {
-      this.error = 'Please enter a search term';
+  searchBookings(): void {
+    this.pageIndex = 1;
+    this.loadOccupiedBookings();
+  }
+
+  checkOut(booking: Booking): void {
+    if (!booking?.booking_id) {
+      this.error = 'Missing booking id';
       return;
     }
 
@@ -65,98 +90,25 @@ export class CheckOutComponent implements OnInit {
     this.error = null;
 
     this.apiService
-      .invoke<any>('booking:search', { searchQuery: this.searchQuery })
+      .postRaw<any>('/CheckInOut/check-out', { BookingId: booking.booking_id })
       .then((response) => {
-        const bookings = response.bookings || [];
-        if (bookings.length > 0) {
-          this.selectBooking(bookings[0]);
+        if (response.success) {
+          alert('Check-out completed successfully');
+          this.loadOccupiedBookings();
         } else {
-          this.error = 'Booking not found';
+          this.error = response.message || 'Check-out failed';
         }
         this.loading = false;
       })
       .catch((err) => {
-        console.error('Failed to search booking:', err);
-        this.error = 'Failed to search booking';
-        this.loading = false;
-      });
-  }
-
-  getTotalExtraCharges(): number {
-    return (this.extraCharges.roomService || 0) + (this.extraCharges.miniBar || 0) + (this.extraCharges.laundry || 0);
-  }
-
-  calculateTaxes(): number {
-    const roomCharge = this.selectedBooking?.total_price || 0;
-    const extraCharge = this.getTotalExtraCharges();
-    return (roomCharge + extraCharge) * 0.1;
-  }
-
-  calculateTotal(): number {
-    if (!this.selectedBooking) return 0;
-    
-    const roomCharge = this.selectedBooking.total_price || 0;
-    const extraCharge = this.getTotalExtraCharges();
-    const taxes = this.calculateTaxes();
-    
-    return roomCharge + extraCharge + taxes;
-  }
-
-  calculateBalance(): number {
-    const total = this.calculateTotal();
-    const paid = (this.selectedBooking?.total_price || 0) * 0.3;
-    return total - paid;
-  }
-
-  completeCheckOut(): void {
-    if (!this.selectedBooking) {
-      this.error = 'No booking selected';
-      return;
-    }
-
-    this.loading = true;
-    this.error = null;
-
-    const checkoutData = {
-      bookingId: this.selectedBooking.booking_id,
-      extraCharges: this.extraCharges,
-      inspection: this.inspection,
-      paymentMethod: this.paymentMethod
-    };
-
-    this.apiService
-      .invoke('booking:check-out', checkoutData)
-      .then(() => {
-        alert('Check-out completed successfully');
-        this.resetForm();
-        this.loadOccupiedBookings();
-        this.loading = false;
-      })
-      .catch((err) => {
         console.error('Failed to complete check-out:', err);
-        this.error = 'Failed to complete check-out';
+        this.error = err.message || 'Failed to complete check-out';
         this.loading = false;
       });
-  }
-
-  resetCharges(): void {
-    this.extraCharges = {
-      roomService: 0,
-      miniBar: 0,
-      laundry: 0
-    };
-    this.inspection = {
-      damagesFound: false,
-      damageDetails: '',
-      estimatedRepair: 0
-    };
-    this.paymentMethod = 'Cash';
   }
 
   resetForm(): void {
     this.searchQuery = '';
-    this.selectedBooking = null;
-    this.resetCharges();
   }
 
   cancel(): void {
